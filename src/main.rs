@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
     // accept a TCP connection
     for stream in listener.incoming() {
         let stream = stream.unwrap();
-        println!("Connection established with {:?}!", stream.peer_addr().unwrap()); 
+        println!("Accepted connection from {:?}.", stream.peer_addr().unwrap());
         handle_connection(stream);
         
         //return Ok(())
