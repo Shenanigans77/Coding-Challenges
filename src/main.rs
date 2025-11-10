@@ -6,8 +6,7 @@
 //      This will require you to keep the main ‘thread’ of execution running and listening for incoming connections as well as spawning a new ‘thread’ 
 //      of execution to handle each client. https://codingchallenges.substack.com/p/coding-challenge-101-echo-server
 use std::{
-    net::{TcpListener, TcpStream},
-    io::{BufReader, Error, Read, prelude::*},
+    io::{BufReader, BufWriter, Error, Read, prelude::*}, net::{TcpListener, TcpStream}
 };
 
 
@@ -26,6 +25,7 @@ fn main() -> Result<(), Error> {
         handle_connection(stream);
         
         //return Ok(())
+        continue;
     }
     //let (mut tcp_stream, addr) = listener.accept()?; //block until requested
     //println!("Connection received! {:?} is sending data.", addr);
@@ -46,4 +46,10 @@ fn handle_connection(stream: TcpStream) {
         .collect();
 
     println!("Request: {http_request:#?}");
+    //stream.write(http_request);
+    let mut buf_writer = BufWriter::new(stream);
+    for i in http_request{
+        let _ = buf_writer.write(i.as_bytes()); // ToDo - figure out this write
+    }
+    let _ = buf_writer.flush(); // the let _ ignores the error result which could be thrown
 }
