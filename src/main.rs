@@ -6,9 +6,39 @@
 //      This will require you to keep the main ‘thread’ of execution running and listening for incoming connections as well as spawning a new ‘thread’ 
 //      of execution to handle each client. https://codingchallenges.substack.com/p/coding-challenge-101-echo-server
 use std::{
-    io::{self, BufReader, BufWriter, Error, prelude::*}, net::{TcpListener, TcpStream}, thread
+    io::{self, BufReader, BufWriter, Error, LineWriter, prelude::*}, net::{TcpListener, TcpStream}, thread
 };
 
+pub struct DataCodec {
+    // Buffered reader and writers
+    reader: BufReader<TcpStream>,
+    writer: LineWriter<TcpStream>,
+}
+
+impl DataCodec {
+    // Encapsulate a stream with read/write functionality
+    pub fn new(stream: TcpStream) -> io::Result<Self> {
+        let writer = LineWriter::new(stream.try_clone()?);
+        let reader = BufReader::new(stream);
+        Ok(Self { reader, writer})
+    }
+
+    // Write the given message, appending a new line.
+    pub fn send_message(&mut self, message: &str) -> io::Result<()> {
+        self.writer.write(&message.as_bytes())?;
+
+        self.writer.write(&['\n' as u8])?;
+        Ok(())
+    }
+
+    // Read a received message from TcpStream
+    pub fn read_message(&mut self) -> io::Result<String> {
+        let mut line = String::new();
+        self.reader.read_line(&mut line)?;
+        line.pop();
+        Ok(line)
+    }
+}
 
 fn main() -> Result<(), Error> {
     //In this step your goal is to build a simple server that will start-up 
@@ -23,14 +53,12 @@ fn main() -> Result<(), Error> {
         match stream {
             Ok(stream) => {
                 thread::spawn(|| {
-                    println!("Accepted connection from {:?}", stream.peer_addr()); // This works because the possible error has been handled
-                    handle_connection(stream); // I think this isn't responding the way I expect because it's handling requests sequentially
+                    println!("Accepted connection from {:?}", stream.peer_addr().unwrap()); // This works because the possible error has been handled
+                    handle_connection(stream); 
                 });
                 }
             Err(_e) => { /* connection failed */}
         }
-
-        continue;
     }
     //let (mut tcp_stream, addr) = listener.accept()?; //block until requested
     //println!("Connection received! {:?} is sending data.", addr);
@@ -42,7 +70,7 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn handle_connection(stream: TcpStream) {
+fn handle_connection(stream: TcpStream) -> io::Result<()> {
     let buf_reader = BufReader::new(&stream);
     let mut writer = io::LineWriter::new(stream.try_clone().unwrap());
     // echo input
@@ -61,11 +89,14 @@ fn handle_connection(stream: TcpStream) {
     //stream.write(http_request);
     //let mut buf_writer = BufWriter::new(stream);
     
-    for i in http_request{
-        //let _bytes_written = 
-        writer.write(&i.as_bytes()).unwrap(); // ToDo - figure out this write
-        //println!("{:?}", _bytes_written);
+    for i in &http_request{
+        //This write doesn't appear to write
+        writer.write(&i.as_bytes())?; // ToDo - figure out this write
+        
+        //println!("{:?}", i);
     }
+    let _ = writer.flush()?;
+    //println!("Wrote {http_request:#?} to {}", stream.peer_addr().unwrap());
     //writer.flush().unwrap(); // the let _ ignores the error result which could be thrown
-    //Ok(());
+    Ok(())
 }
