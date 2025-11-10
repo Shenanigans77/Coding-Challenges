@@ -6,7 +6,7 @@
 //      This will require you to keep the main ‘thread’ of execution running and listening for incoming connections as well as spawning a new ‘thread’ 
 //      of execution to handle each client. https://codingchallenges.substack.com/p/coding-challenge-101-echo-server
 use std::{
-    io::{BufReader, BufWriter, Error, Read, prelude::*}, net::{TcpListener, TcpStream}
+    io::{self, BufReader, BufWriter, Error, prelude::*}, net::{TcpListener, TcpStream}, thread
 };
 
 
@@ -20,11 +20,16 @@ fn main() -> Result<(), Error> {
     
     // accept a TCP connection
     for stream in listener.incoming() {
-        let stream = stream.unwrap();
-        println!("Accepted connection from {:?}.", stream.peer_addr().unwrap());
-        handle_connection(stream);
-        
-        //return Ok(())
+        match stream {
+            Ok(stream) => {
+                thread::spawn(|| {
+                    println!("Accepted connection from {:?}", stream.peer_addr()); // This works because the possible error has been handled
+                    handle_connection(stream); // I think this isn't responding the way I expect because it's handling requests sequentially
+                });
+                }
+            Err(_e) => { /* connection failed */}
+        }
+
         continue;
     }
     //let (mut tcp_stream, addr) = listener.accept()?; //block until requested
@@ -39,17 +44,28 @@ fn main() -> Result<(), Error> {
 
 fn handle_connection(stream: TcpStream) {
     let buf_reader = BufReader::new(&stream);
+    let mut writer = io::LineWriter::new(stream.try_clone().unwrap());
+    // echo input
+
+    /* 
+    Does this have to process fully before I move on to the next step?
+    I think what I want for now is for this to roll the response back to the sender.
+     */
     let http_request: Vec<_> = buf_reader
         .lines()
         .map(|result| result.unwrap())
         .take_while(|line| !line.is_empty())
         .collect();
-
+    
     println!("Request: {http_request:#?}");
     //stream.write(http_request);
-    let mut buf_writer = BufWriter::new(stream);
+    //let mut buf_writer = BufWriter::new(stream);
+    
     for i in http_request{
-        let _ = buf_writer.write(i.as_bytes()); // ToDo - figure out this write
+        //let _bytes_written = 
+        writer.write(&i.as_bytes()).unwrap(); // ToDo - figure out this write
+        //println!("{:?}", _bytes_written);
     }
-    let _ = buf_writer.flush(); // the let _ ignores the error result which could be thrown
+    //writer.flush().unwrap(); // the let _ ignores the error result which could be thrown
+    //Ok(());
 }
