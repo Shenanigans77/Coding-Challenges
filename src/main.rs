@@ -9,6 +9,7 @@ use std::{
     io::{self, BufReader, Error, LineWriter, prelude::*}, net::{TcpListener, TcpStream}, thread
 };
 
+#[derive(Debug)]
 pub struct DataCodec {
     // Buffered reader and writers
     reader: BufReader<TcpStream>,
@@ -55,7 +56,8 @@ fn main() -> Result<(), Error> {
                 thread::spawn(|| {
                     let peer_addr = stream.peer_addr().unwrap();
                     println!("Accepted connection from {:?}", &peer_addr); // This works because the possible error has been handled
-                    //let thread_stream = stream;
+                
+
                     loop {
                         //let handled_connection = handle_connection(thread_stream);
                         let handled_connection = handle_connection(stream);
@@ -78,15 +80,9 @@ fn main() -> Result<(), Error> {
             }
         }
     }
-    //let (mut tcp_stream, addr) = listener.accept()?; //block until requested
-    //println!("Connection received! {:?} is sending data.", addr);
-    
-    //I don't care about handling input yet.
-    //let mut input = String::new();
-    //let _ = tcp_stream.read_to_string(&mut input)?;
-    //println!("{:?} says {}", addr, input);
     Ok(())
 }
+
 
 fn handle_connection(stream: TcpStream) -> io::Result<()> {
     let mut codec = DataCodec::new(stream)?;
@@ -96,37 +92,3 @@ fn handle_connection(stream: TcpStream) -> io::Result<()> {
     codec.send_message(&message)?;
     Ok(())
 }
-
-/* 
-    This does return a single echo, then a Ncat: broken pipe
-*/
-//fn handle_connection(stream: TcpStream) -> io::Result<()> {
-//    let buf_reader = BufReader::new(&stream);
-//    let mut writer = io::LineWriter::new(stream.try_clone().unwrap());
-//    // echo input
-//
-//    /* 
-//    Does this have to process fully before I move on to the next step?
-//    I think what I want for now is for this to roll the response back to the sender.
-//     */
-//    let http_request: Vec<_> = buf_reader
-//        .lines()
-//        .map(|result| result.unwrap())
-//        .take_while(|line| !line.is_empty())
-//        .collect();
-//    
-//    println!("Request: {http_request:#?}");
-//    //stream.write(http_request);
-//    //let mut buf_writer = BufWriter::new(stream);
-//    
-//    for i in &http_request{
-//        //This write doesn't appear to write
-//        writer.write(&i.as_bytes())?; // ToDo - figure out this write
-//        
-//        //println!("{:?}", i);
-//    }
-//    let _ = writer.flush()?;
-//    //println!("Wrote {http_request:#?} to {}", stream.peer_addr().unwrap());
-//    //writer.flush().unwrap(); // the let _ ignores the error result which could be thrown
-//    Ok(())
-//}
