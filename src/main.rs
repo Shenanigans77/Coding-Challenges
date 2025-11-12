@@ -56,18 +56,16 @@ fn main() -> Result<(), Error> {
                 thread::spawn(|| {
                     let peer_addr = stream.peer_addr().unwrap();
                     println!("Accepted connection from {:?}", &peer_addr); // This works because the possible error has been handled
-                
+                    let mut codec = DataCodec::new(stream)
+                        .expect("Failed to create DataCodec.");
 
                     loop {
-                        //let handled_connection = handle_connection(thread_stream);
-                        let handled_connection = handle_connection(stream);
-                        match handled_connection {
-                            Ok(handled_connection) => handled_connection,
-                            Err(e) => {
-                                eprintln!("Session Error: {e:?}");
-                                break; // This assumes a closed connection would error this loop
-                            }
-                        }
+                        let message = match codec.read_message() {
+                            Ok(msg) if !msg.is_empty() => msg,
+                            _ => break, // Break on error or EOF
+                        };
+
+                        codec.send_message(&message).expect("Send error");
                     }
                     // This should run as a while loop to keep the connection open until the client closes it.
                     
@@ -86,7 +84,7 @@ fn main() -> Result<(), Error> {
 
 fn handle_connection(stream: TcpStream) -> io::Result<()> {
     let mut codec = DataCodec::new(stream)?;
-
+    
     let message: String = codec.read_message()?;
 
     codec.send_message(&message)?;
