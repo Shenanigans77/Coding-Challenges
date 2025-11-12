@@ -26,7 +26,7 @@ impl DataCodec {
     // Write the given message, appending a new line.
     pub fn send_message(&mut self, message: &str) -> io::Result<()> {
         self.writer.write(&message.as_bytes())?;
-
+        // This line flushes the buffer
         self.writer.write(&['\n' as u8])?;
         Ok(())
     }
@@ -53,14 +53,23 @@ fn main() -> Result<(), Error> {
         match stream {
             Ok(stream) => {
                 thread::spawn(|| {
-                    println!("Accepted connection from {:?}", stream.peer_addr().unwrap()); // This works because the possible error has been handled
-                    let handled_connection = handle_connection(stream);
-                    match handled_connection {
-                        Ok(handled_connection) => handled_connection,
-                        Err(e) => {
-                            eprintln!("Session Error: {e:?}");
+                    let peer_addr = stream.peer_addr().unwrap();
+                    println!("Accepted connection from {:?}", &peer_addr); // This works because the possible error has been handled
+                    //let thread_stream = stream;
+                    loop {
+                        //let handled_connection = handle_connection(thread_stream);
+                        let handled_connection = handle_connection(stream);
+                        match handled_connection {
+                            Ok(handled_connection) => handled_connection,
+                            Err(e) => {
+                                eprintln!("Session Error: {e:?}");
+                                break; // This assumes a closed connection would error this loop
+                            }
                         }
                     }
+                    // This should run as a while loop to keep the connection open until the client closes it.
+                    
+                    println!("Connection from {:?} closed.", &peer_addr);
                 });
             }
             Err(e) => { 
