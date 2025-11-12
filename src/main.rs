@@ -62,13 +62,11 @@ fn main() -> Result<(), Error> {
                     loop {
                         let message = match codec.read_message() {
                             Ok(msg) if !msg.is_empty() => msg,
-                            _ => break, // Break on error or EOF
+                            _ => break, // Break on error or EOF. Also breaks on newlines - I'm not sure if this is expected. 
                         };
 
                         codec.send_message(&message).expect("Send error");
                     }
-                    // This should run as a while loop to keep the connection open until the client closes it.
-                    
                     println!("Connection from {:?} closed.", &peer_addr);
                 });
             }
@@ -89,4 +87,61 @@ fn handle_connection(stream: TcpStream) -> io::Result<()> {
 
     codec.send_message(&message)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    // These tests should include a quick spin up of an incoming connection to simulate various cases
+    const TEST_ADDR: &str = "localhost:7878";
+
+    // This should take an argument for the test message and return a stream to work with.
+    fn setup_test_requirements(addr: &str) -> io::Result<(TcpStream, TcpStream)> {
+        let listener = TcpListener::bind(addr).unwrap();
+        let test_client: TcpStream = TcpStream::connect(addr).unwrap();
+        let test_stream = listener.accept().unwrap();
+        let test_stream_result = test_stream.0;
+        // Return test_client and test_stream
+        return Ok((test_client, test_stream_result));
+    }
+
+    #[test]
+    fn codec_read_message() {
+        // General setup 
+        let (client, server) = setup_test_requirements(TEST_ADDR).unwrap();
+        
+        /* Test Spec: The server should receive the same message the client sends. */
+        // Test message
+        let msg_sent: String = String::from("Frog");
+        
+        // Send a test message. This could be extended to test a series of messages - ToDo
+        let mut client_codec = DataCodec::new(client).unwrap();
+        client_codec.send_message(&msg_sent).unwrap();
+        
+        // Read messages sent to the server.
+        let mut server_codec = DataCodec::new(server).unwrap();
+        let msg_received = server_codec.read_message().unwrap();
+        
+        assert_eq!(msg_received,"Frog")
+    }
+
+    #[test]
+    fn echo_message() {
+        // General Setup
+        let (client, server) = setup_test_requirements(TEST_ADDR).unwrap();
+        let mut client_codec = DataCodec::new(client).unwrap();
+        let mut server_codec = DataCodec::new(server).unwrap();
+
+        /* Test Spec: A client sending a message to the server should receive the same message back. */ 
+        let test_msg = String::from("Tomato");
+
+        client_codec.send_message(&test_msg).unwrap();
+        let received_msg = server_codec.read_message().unwrap();
+        server_codec.send_message(&received_msg).unwrap();
+        let echoed_msg = client_codec.read_message().unwrap();
+
+        assert_eq!(echoed_msg,test_msg)
+    }
 }
