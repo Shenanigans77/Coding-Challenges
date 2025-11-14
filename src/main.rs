@@ -80,14 +80,14 @@ fn main() -> Result<(), Error> {
 }
 
 
-fn handle_connection(stream: TcpStream) -> io::Result<()> {
-    let mut codec = DataCodec::new(stream)?;
-    
-    let message: String = codec.read_message()?;
-
-    codec.send_message(&message)?;
-    Ok(())
-}
+//fn handle_connection(stream: TcpStream) -> io::Result<()> {
+//    let mut codec = DataCodec::new(stream)?;
+//    
+//    let message: String = codec.read_message()?;
+//
+//    codec.send_message(&message)?;
+//    Ok(())
+//}
 
 #[cfg(test)]
 mod tests {
