@@ -1,10 +1,13 @@
-//For this Coding Challenge your goal is to build an echo server that implements all of the Echo Protocol as defined in RFC 862.
-//1.    In this step your goal is to build a simple server that will start-up, bind to all the local IP addresses, listen on port 7, and accept a TCP connection. 
-//      To complete this step simply have the server print out a log message to show a connection has been accepted and then have it shutdown. 
-//      Refer to the documentation for you programming language to find out how to write network programs using it.
-//2.    In this step your goal is to extend your server to accept multiple concurrent connections. 
-//      This will require you to keep the main ‘thread’ of execution running and listening for incoming connections as well as spawning a new ‘thread’ 
-//      of execution to handle each client. https://codingchallenges.substack.com/p/coding-challenge-101-echo-server
+/*For this Coding Challenge your goal is to build an echo server that implements all of the Echo Protocol as defined in RFC 862.
+    1.    In this step your goal is to build a simple server that will start-up, bind to all the local IP addresses, listen on port 7, and accept a TCP connection. 
+          To complete this step simply have the server print out a log message to show a connection has been accepted and then have it shutdown. 
+          Refer to the documentation for you programming language to find out how to write network programs using it.
+    2.    In this step your goal is to extend your server to accept multiple concurrent connections. 
+          This will require you to keep the main ‘thread’ of execution running and listening for incoming connections as well as spawning a new ‘thread’ 
+          of execution to handle each client. https://codingchallenges.substack.com/p/coding-challenge-101-echo-server
+    3.    In this step your goal is to read data from the client and write that data back to the client. That should continue until the client terminates the connection.
+    4.    In this step your goal is to add a command line flag so your echo server can be started up using either TCP or UDP on port 7878.
+*/
 use std::{
     io::{self, BufReader, Error, LineWriter, prelude::*}, net::{TcpListener, TcpStream}, thread
 };
