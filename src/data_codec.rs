@@ -1,6 +1,11 @@
 use std::{
-    io::{self, BufReader, LineWriter, prelude::*}, net::{TcpListener, TcpStream}
+    array, io::{self, BufReader, LineWriter, prelude::*}, net::{TcpListener, TcpStream, UdpSocket}
 };
+
+pub enum Protocol {
+    TCP,
+    UDP,
+}
 
 #[derive(Debug)]
 pub struct DataCodec {
@@ -34,6 +39,57 @@ impl DataCodec {
     }
 }
 
+#[derive(Debug)]
+pub struct UdpConnector {
+    receiver: [u8; 10], // This may need to be expanded. Could I use a vector?
+    socket: UdpSocket,
+}
+
+impl UdpConnector {
+    pub fn new(sock: UdpSocket) -> io::Result<Self> {
+        let socket = sock;
+
+        Ok(Self { receiver: [0; 10], socket })
+    }
+
+    // Read message from the UDP socket
+    pub fn read_message(&mut self) -> io::Result<String> {
+        match self.socket.recv(&mut self.receiver) {
+            Ok(_received) => {
+                let msg = match str::from_utf8(&self.receiver) {
+                    Ok(v) => v,
+                    Err(e) =>  panic!("Invalid UTF-8 sequence: {}", e),
+                };
+            },
+            Err(e) => println!("recv function failed: {:?}", e),
+        };
+        //let msg = match String::from_utf8(&self.receiver) {
+        //    Ok(v) => v,
+        //    Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+        //};
+        Ok(v)
+    }
+}
+
+fn udp() -> std::io::Result<()> {
+    {
+        let socket = UdpSocket::bind("127.0.0.1:34254").expect("couldn't bind to address");
+        socket.connect("127.0.0.1:34254").expect("connect function failed");
+        println!("ready");
+        let mut buf = [0; 2048];
+        match socket.recv(&mut buf) {
+            Ok(_received) =>{
+                let s = match str::from_utf8(&buf) {
+                    Ok(v) => v,
+                    Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+                };
+                println!("result: {}", s);
+            },
+            Err(e) => println!("recv function failed: {:?}", e),
+        }
+    } // the socket is closed here
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {

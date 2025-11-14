@@ -2,6 +2,8 @@ use std::{
     io::{self, Error}, net::{TcpListener, UdpSocket}
 };
 
+use crate::data_codec;
+
 #[derive(Debug)]
 pub enum ConnProtocol {
     TCP(TcpListener),
@@ -10,14 +12,12 @@ pub enum ConnProtocol {
 
 #[derive(Debug)]
 pub struct ConnectionConfig {
-    protocol: ConnProtocol,
-    address: String,
+    connection: ConnProtocol,
 }
 
 impl ConnectionConfig {
-    pub fn new(proto: ConnProtocol, addr: String) -> io::Result<Self> {
-        let protocol = proto;
-        let address = addr;
-        Ok(Self { protocol, address })
+    pub fn new(proto: ConnProtocol) -> io::Result<Self> {
+        let connection = proto;
+        Ok(Self { connection })
     } 
 }
