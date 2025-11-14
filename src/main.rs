@@ -9,7 +9,7 @@
     4.    In this step your goal is to add a command line flag so your echo server can be started up using either TCP or UDP on port 7878.
 */
 use std::{
-    io::{self, BufReader, Error, LineWriter, prelude::*}, net::{TcpListener, TcpStream}, thread
+    env::args, io::{self, BufReader, Error, LineWriter, prelude::*}, net::{TcpListener, TcpStream}, thread
 };
 
 #[derive(Debug)]
@@ -44,10 +44,24 @@ impl DataCodec {
     }
 }
 
+
+
 fn main() -> Result<(), Error> {
     //In this step your goal is to build a simple server that will start-up 
     // bind to all the local IP addresses 
-    let listener = TcpListener::bind("localhost:7878")?;
+    const SERVER_ADDR: &str = "localhost:7878";
+    /*
+    Step 4 requires a command line flag to specify udp (tcp is default).
+    */
+    // Store arguments
+    let args = args();
+    for arg in args {
+        if arg == String::from("udp") {
+            // configure echo server to use a udp connection.
+        }
+    }
+
+    let listener = TcpListener::bind(SERVER_ADDR)?;
     // listen on port 7878 
     let port = listener.local_addr()?; // Only needed for the random port approach.
     println!("Listening on {}, access this port to end the program.", port);
