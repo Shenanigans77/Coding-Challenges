@@ -1,5 +1,5 @@
 use std::{
-    io::{self, BufReader, LineWriter, prelude::*}, net::{SocketAddr, TcpListener, TcpStream, UdpSocket},
+    io::{self, BufReader, LineWriter, prelude::*}, net::{SocketAddr, TcpStream, UdpSocket},
 };
 
 pub enum Protocol {
@@ -101,6 +101,7 @@ pub fn udp() -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::net::TcpListener;
 
     use super::*;
 
@@ -108,7 +109,7 @@ mod tests {
     const TEST_ADDR: &str = "localhost:7878";
 
     // This should take an argument for the test message and return a stream to work with.
-    fn setup_test_requirements(addr: &str) -> io::Result<(TcpStream, TcpStream)> {
+    fn setup_tcp_test_requirements(addr: &str) -> io::Result<(TcpStream, TcpStream)> {
         let listener = TcpListener::bind(addr).unwrap();
         let test_client: TcpStream = TcpStream::connect(addr).unwrap();
         let test_stream = listener.accept().unwrap();
@@ -118,9 +119,9 @@ mod tests {
     }
 
     #[test]
-    fn codec_read_message() {
+    fn tcp_codec_read_message() {
         // General setup 
-        let (client, server) = setup_test_requirements(TEST_ADDR).unwrap();
+        let (client, server) = setup_tcp_test_requirements(TEST_ADDR).unwrap();
         
         /* Test Spec: The server should receive the same message the client sends. */
         // Test message
@@ -138,9 +139,9 @@ mod tests {
     }
 
     #[test]
-    fn echo_message() {
+    fn tcp_echo_message() {
         // General Setup
-        let (client, server) = setup_test_requirements(TEST_ADDR).unwrap();
+        let (client, server) = setup_tcp_test_requirements(TEST_ADDR).unwrap();
         let mut client_codec = DataCodec::new(client).unwrap();
         let mut server_codec = DataCodec::new(server).unwrap();
 
@@ -153,5 +154,27 @@ mod tests {
         let echoed_msg = client_codec.read_message().unwrap();
 
         assert_eq!(echoed_msg,test_msg)
+    }
+
+    // Test a udp echo
+    #[test]
+    fn udp_echo_test() {
+        let test_msg = String::from("Frog");
+        dbg!(&test_msg);
+        let mut server = UdpConnector::new(UdpSocket::bind(TEST_ADDR)
+            .expect("Unable to bind to server address")
+            ).expect("Unable to create UdpConnector");
+
+        let client_sock = UdpSocket::bind("localhost:7879").expect("Unable to bind a client socket");
+        client_sock.send(test_msg.as_bytes()).expect("Client unable to send message.");
+        
+        let incoming = server.read_message().expect("Server unable to read message via UDP");
+        server.send_message(incoming.0, incoming.1).expect("Server unable to send message.");
+        
+        let mut client_buf: [u8; 1024] = [0; 1024];
+        client_sock.recv(&mut client_buf).expect("Client unable to receive echo.");
+        let echoed_msg = str::from_utf8(&client_buf).expect("Cannot convert the buffer to string.");
+        dbg!(&echoed_msg);
+        assert_eq!(echoed_msg, test_msg)
     }
 }
