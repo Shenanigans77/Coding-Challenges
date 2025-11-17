@@ -9,34 +9,35 @@
     4.    In this step your goal is to add a command line flag so your echo server can be started up using either TCP or UDP on port 7878.
 */
 use std::{
-    env::args, io::{self, BufReader, Error, LineWriter, prelude::*}, net::{TcpListener, TcpStream, UdpSocket}, thread
+    env::args, io::{Error}, net::{TcpListener, UdpSocket}, thread
 };
+
+use crate::data_codec::UdpConnector;
 pub mod data_codec;
-pub mod connection;
+
 
 fn main() -> Result<(), Error> {
     //In this step your goal is to build a simple server that will start-up 
     // bind to all the local IP addresses 
     const SERVER_ADDR: &str = "localhost:7878";
-    /*
-    Step 4 requires a command line flag to specify udp (tcp is default).
-    */
     // Store arguments
     let args: Vec<String> = args().collect();
-    dbg!(&args);
+    dbg!(&args); 
     //let protocol;
-    let flag_protocol = &args[1];
+    let flag_protocol = &args[1]; // ToDo - handle running with no arguments.
     if flag_protocol == &String::from("udp") {
-        //protocol = connection::ConnProtocol::UDP((UdpSocket::bind(SERVER_ADDR)).unwrap());
-        
-        Ok(())
+        let mut udp_connector = UdpConnector::new(UdpSocket::bind(SERVER_ADDR)?).expect("Unable to bind socket.");
+        println!("Listening on {} with UDP.", SERVER_ADDR);
+        // UDP doesn't require a thread for this because there connection isn't maintained the same way TCP does. 
+        loop {
+            let incoming_msg = udp_connector.read_message().expect("Couldn't read message");
+            let _outgoing_msg = udp_connector.send_message(incoming_msg.0, incoming_msg.1);
+        }
     }
     else { // TCP
-        //protocol = connection::ConnProtocol::TCP((TcpListener::bind(SERVER_ADDR)).unwrap());
         let listener = TcpListener::bind(SERVER_ADDR)?;
         // listen on port 7878 
-        //let port = listener.local_addr()?; // Only needed for the random port approach.
-        println!("Listening on {}, access this port to end the program.", SERVER_ADDR);
+        println!("Listening on {} with TCP.", SERVER_ADDR);
         
         // accept a TCP connection
         for stream in listener.incoming() {
@@ -66,11 +67,5 @@ fn main() -> Result<(), Error> {
             }
         }
         Ok(()) 
-    }
-    
-    
-
-
-    // TCP
-    
+    }   
 }

@@ -1,5 +1,5 @@
 use std::{
-    array, io::{self, BufReader, LineWriter, prelude::*}, net::{IpAddr, TcpListener, TcpStream, UdpSocket, SocketAddr},
+    io::{self, BufReader, LineWriter, prelude::*}, net::{SocketAddr, TcpListener, TcpStream, UdpSocket},
 };
 
 pub enum Protocol {
@@ -41,27 +41,28 @@ impl DataCodec {
 
 #[derive(Debug)]
 pub struct UdpConnector {
-    receiver: [u8; 10], // This may need to be expanded. Could I use a vector?
+    //receiver: [u8; 10], // This may need to be expanded. Could I use a vector?
     udp_socket: UdpSocket,
-    sock_address: SocketAddr,
+    //sock_address: SocketAddr,
 }
 
 impl UdpConnector {
-    pub fn new(sock: UdpSocket, addr: SocketAddr) -> io::Result<Self> {
+    pub fn new(sock: UdpSocket) -> io::Result<Self> {
         let udp_socket = sock;
-        let receiver = [0; 10];
-        let sock_address = addr;
-        udp_socket.connect(sock_address).expect("Could not connect to address");
-        Ok(Self { receiver, udp_socket, sock_address })
+        //let receiver = [0; 10];
+        //let sock_address = SocketAddr::from_str(addr).expect("Address parse error");
+        //udp_socket.connect(sock_address).expect("Could not connect to address");
+        Ok(Self { udp_socket })
     }
 
     // Read message from the UDP socket
-    pub fn read_message(&mut self) -> io::Result<String> { // ToDo - rewrite this to be clearer
+    pub fn read_message(&mut self) -> io::Result<(String, SocketAddr)> { // ToDo - rewrite this to be clearer
+        let mut receiver = [0; 1024];
         //self.udp_socket.connect(self.sock_address).expect("Could not connect to address");
-        match self.udp_socket.recv(&mut self.receiver) {
-            Ok(_received) => { // This should return v on ok or an error.
-                match str::from_utf8(&self.receiver) {
-                    Ok(v) => Ok(v.to_string()), // Why does this OK() help?
+        match self.udp_socket.recv_from(&mut receiver) {
+            Ok(received) => { // This should return v on ok or an error.
+                match str::from_utf8(&receiver) {
+                    Ok(v) => Ok((v.to_string(),received.1)), // Why does this OK() help?
                     Err(e) =>  panic!("Invalid UTF-8 sequence: {}", e),
                 }
             },
@@ -70,10 +71,10 @@ impl UdpConnector {
     }
 
     // Write message to the UDP Socket
-    pub fn send_message(&mut self, message: String) -> io::Result<()> {
+    pub fn send_message(&mut self, message: String, addr: SocketAddr) -> io::Result<()> {
         
         let msg_bytes = message.as_bytes();
-        self.udp_socket.send(msg_bytes).expect("Couldn't send message");
+        self.udp_socket.send_to(msg_bytes, addr).expect("Couldn't send message");
         Ok(())
     }
 }
@@ -81,11 +82,11 @@ impl UdpConnector {
 pub fn udp() -> std::io::Result<()> {
     {
         let socket = UdpSocket::bind("127.0.0.1:34254").expect("couldn't bind to address");
-        socket.connect("127.0.0.1:34254").expect("connect function failed");
+        socket.connect("127.0.0.1:34254").expect("Connect function failed");
         println!("ready");
         let mut buf = [0; 2048];
         match socket.recv(&mut buf) {
-            Ok(_received) =>{
+            Ok(_received) => {
                 let s = match str::from_utf8(&buf) {
                     Ok(v) => v,
                     Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
