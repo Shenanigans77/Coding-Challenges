@@ -166,15 +166,19 @@ mod tests {
             ).expect("Unable to create UdpConnector");
 
         let client_sock = UdpSocket::bind("localhost:7879").expect("Unable to bind a client socket");
+        client_sock.connect(TEST_ADDR).expect("Client unable to connect to server.");
         client_sock.send(test_msg.as_bytes()).expect("Client unable to send message.");
         
         let incoming = server.read_message().expect("Server unable to read message via UDP");
+        dbg!(&incoming.0);
         server.send_message(incoming.0, incoming.1).expect("Server unable to send message.");
         
         let mut client_buf: [u8; 1024] = [0; 1024];
         client_sock.recv(&mut client_buf).expect("Client unable to receive echo.");
-        let echoed_msg = str::from_utf8(&client_buf).expect("Cannot convert the buffer to string.");
-        dbg!(&echoed_msg);
+        let echoed_msg = str::from_utf8(&client_buf)
+            .expect("Cannot convert the buffer to string.")
+            .to_string();
+        println!("{}", &echoed_msg); // The odd '/0/0/0...' issue I saw earlier causes this test to fail but doesn't appear live.
         assert_eq!(echoed_msg, test_msg)
     }
 }
