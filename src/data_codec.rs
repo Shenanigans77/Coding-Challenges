@@ -1,5 +1,5 @@
 use std::{
-    array, io::{self, BufReader, LineWriter, prelude::*}, net::{TcpListener, TcpStream, UdpSocket}
+    array, io::{self, BufReader, LineWriter, prelude::*}, net::{IpAddr, TcpListener, TcpStream, UdpSocket, SocketAddr},
 };
 
 pub enum Protocol {
@@ -42,36 +42,43 @@ impl DataCodec {
 #[derive(Debug)]
 pub struct UdpConnector {
     receiver: [u8; 10], // This may need to be expanded. Could I use a vector?
-    socket: UdpSocket,
+    udp_socket: UdpSocket,
+    sock_address: SocketAddr,
 }
 
 impl UdpConnector {
-    pub fn new(sock: UdpSocket) -> io::Result<Self> {
-        let socket = sock;
-
-        Ok(Self { receiver: [0; 10], socket })
+    pub fn new(sock: UdpSocket, addr: SocketAddr) -> io::Result<Self> {
+        let udp_socket = sock;
+        let receiver = [0; 10];
+        let sock_address = addr;
+        udp_socket.connect(sock_address).expect("Could not connect to address");
+        Ok(Self { receiver, udp_socket, sock_address })
     }
 
     // Read message from the UDP socket
-    pub fn read_message(&mut self) -> io::Result<String> {
-        match self.socket.recv(&mut self.receiver) {
-            Ok(_received) => {
-                let msg = match str::from_utf8(&self.receiver) {
-                    Ok(v) => v,
+    pub fn read_message(&mut self) -> io::Result<String> { // ToDo - rewrite this to be clearer
+        //self.udp_socket.connect(self.sock_address).expect("Could not connect to address");
+        match self.udp_socket.recv(&mut self.receiver) {
+            Ok(_received) => { // This should return v on ok or an error.
+                match str::from_utf8(&self.receiver) {
+                    Ok(v) => Ok(v.to_string()), // Why does this OK() help?
                     Err(e) =>  panic!("Invalid UTF-8 sequence: {}", e),
-                };
+                }
             },
-            Err(e) => println!("recv function failed: {:?}", e),
-        };
-        //let msg = match String::from_utf8(&self.receiver) {
-        //    Ok(v) => v,
-        //    Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-        //};
-        Ok(v)
+            Err(e) => panic!("recv function failed: {:?}", e), // I don't want this to panic
+        }
+    }
+
+    // Write message to the UDP Socket
+    pub fn send_message(&mut self, message: String) -> io::Result<()> {
+        
+        let msg_bytes = message.as_bytes();
+        self.udp_socket.send(msg_bytes).expect("Couldn't send message");
+        Ok(())
     }
 }
 
-fn udp() -> std::io::Result<()> {
+pub fn udp() -> std::io::Result<()> {
     {
         let socket = UdpSocket::bind("127.0.0.1:34254").expect("couldn't bind to address");
         socket.connect("127.0.0.1:34254").expect("connect function failed");

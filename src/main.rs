@@ -24,48 +24,53 @@ fn main() -> Result<(), Error> {
     // Store arguments
     let args: Vec<String> = args().collect();
     dbg!(&args);
-    let protocol;
+    //let protocol;
     let flag_protocol = &args[1];
     if flag_protocol == &String::from("udp") {
-        protocol = connection::ConnProtocol::UDP((UdpSocket::bind(SERVER_ADDR)).unwrap());
+        //protocol = connection::ConnProtocol::UDP((UdpSocket::bind(SERVER_ADDR)).unwrap());
+        
+        Ok(())
     }
-    else {
-        protocol = connection::ConnProtocol::TCP((TcpListener::bind(SERVER_ADDR)).unwrap()); 
-    }
-    
-    
+    else { // TCP
+        //protocol = connection::ConnProtocol::TCP((TcpListener::bind(SERVER_ADDR)).unwrap());
+        let listener = TcpListener::bind(SERVER_ADDR)?;
+        // listen on port 7878 
+        //let port = listener.local_addr()?; // Only needed for the random port approach.
+        println!("Listening on {}, access this port to end the program.", SERVER_ADDR);
+        
+        // accept a TCP connection
+        for stream in listener.incoming() {
+            match stream {
+                Ok(stream) => {
+                    thread::spawn(|| {
+                        let peer_addr = stream.peer_addr().unwrap();
+                        println!("Accepted connection from {:?}", &peer_addr); // This works because the possible error has been handled
+                        let mut codec = data_codec::DataCodec::new(stream)
+                            .expect("Failed to create DataCodec.");
 
-    let listener = TcpListener::bind(SERVER_ADDR)?;
-    // listen on port 7878 
-    let port = listener.local_addr()?; // Only needed for the random port approach.
-    println!("Listening on {}, access this port to end the program.", port);
-    
-    // accept a TCP connection
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                thread::spawn(|| {
-                    let peer_addr = stream.peer_addr().unwrap();
-                    println!("Accepted connection from {:?}", &peer_addr); // This works because the possible error has been handled
-                    let mut codec = data_codec::DataCodec::new(stream)
-                        .expect("Failed to create DataCodec.");
+                        loop {
+                            let message = match codec.read_message() {
+                                Ok(msg) if !msg.is_empty() => msg,
+                                _ => break, // Break on error or EOF. Also breaks on newlines - I'm not sure if this is expected. 
+                            };
 
-                    loop {
-                        let message = match codec.read_message() {
-                            Ok(msg) if !msg.is_empty() => msg,
-                            _ => break, // Break on error or EOF. Also breaks on newlines - I'm not sure if this is expected. 
-                        };
-
-                        codec.send_message(&message).expect("Send error");
-                    }
-                    println!("Connection from {:?} closed.", &peer_addr);
-                });
-            }
-            Err(e) => { 
-                /* connection failed */
-                eprintln!("Connection Error: {e:?}");
+                            codec.send_message(&message).expect("Send error");
+                        }
+                        println!("Connection from {:?} closed.", &peer_addr);
+                    });
+                }
+                Err(e) => { 
+                    /* connection failed */
+                    eprintln!("Connection Error: {e:?}");
+                }
             }
         }
+        Ok(()) 
     }
-    Ok(())
+    
+    
+
+
+    // TCP
+    
 }
